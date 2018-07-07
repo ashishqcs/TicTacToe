@@ -1,5 +1,6 @@
 package com.miDi.tictactoe;
 
+import android.content.Intent;
 import android.content.res.Resources;
 import android.os.CountDownTimer;
 import android.support.v7.app.AppCompatActivity;
@@ -13,11 +14,12 @@ import java.io.Console;
 
 public class Board extends AppCompatActivity implements View.OnClickListener {
 
-    private static boolean pTurn , cpuTurn;
+    private static boolean p1Turn , p2Turn;
     private static int[][] state;
     private Button[][] button;
     private Button reset;
     private TextView tvScoreX,tvScoreO;
+    private String gameType;
     private static int rounds = 0;
     int scoreX, scoreO;
 
@@ -33,8 +35,11 @@ public class Board extends AppCompatActivity implements View.OnClickListener {
         reset = findViewById(R.id.btn_reset);
         scoreO = 0;
         scoreX = 0;
-        pTurn = true;
-        cpuTurn = false;
+
+        gameType = getIntent().getExtras().getString("type");
+
+        p1Turn = true;
+        p2Turn = false;
 
         for(int i=0; i<3; i++){
             for(int j=0; j<3; j++){
@@ -53,6 +58,10 @@ public class Board extends AppCompatActivity implements View.OnClickListener {
             @Override
             public void onClick(View v) {
 
+                p1Turn = true;
+                p2Turn = false;
+                rounds = 0;
+
                 for(int i=0; i<3; i++){
                     for(int j=0; j<3; j++){
 
@@ -60,41 +69,38 @@ public class Board extends AppCompatActivity implements View.OnClickListener {
                         button[i][j].setText("");
                         button[i][j].setBackgroundColor(getResources().getColor(R.color.gray));
                         button[i][j].setEnabled(true);
-                        pTurn = true;
-                        cpuTurn = false;
-                        rounds = 0;
-
                     }
                 }
             }
         });
 
     }
+
+    //////////////////////////ON CLICK/////////////////////////////////////////
+
     @Override
     public void onClick(final View v) {
 
-        rounds++;
-
-        int i = 0, j =0 ;
+        int i = 0, j = 0;
         int id = v.getId();
         int resID = 0;
-        for(i=0; i<3; i++) {
+        for (i = 0; i < 3; i++) {
             for (j = 0; j < 3; j++) {
-                String Btnid = "btn"+i+j;
+                String Btnid = "btn" + i + j;
                 resID = getResources().getIdentifier(Btnid, "id", getPackageName());
 
-                if (id == resID){
+                if (id == resID) {
                     break;
                 }
             }
 
-            if (id == resID){
+            if (id == resID) {
                 break;
             }
         }
-        if (state[i][j] != -1){
+        if (state[i][j] != -1) {
 
-            ((Button)v).setBackgroundColor(getResources().getColor(R.color.red));
+            ((Button) v).setBackgroundColor(getResources().getColor(R.color.red));
             new CountDownTimer(100, 10) {
                 @Override
                 public void onTick(long millisUntilFinished) {
@@ -104,55 +110,90 @@ public class Board extends AppCompatActivity implements View.OnClickListener {
                 @Override
                 public void onFinish() {
 
-                    ((Button)v).setBackgroundColor(getResources().getColor(R.color.white));
+                    ((Button) v).setBackgroundColor(getResources().getColor(R.color.white));
                 }
             }.start();
 
             return;
         }
 
-        if (pTurn){
+        if (p1Turn) {
 
-            ((Button)v).setText("X");
-            ((Button)v).setBackgroundColor(getResources().getColor(R.color.white));
             state[i][j] = 1;
-           // Toast.makeText(this,""+i+" "+j, Toast.LENGTH_SHORT).show();
+            ((Button) v).setText("X");
+            rounds++;
+            ((Button) v).setBackgroundColor(getResources().getColor(R.color.white));
+            // Toast.makeText(this,""+i+" "+j, Toast.LENGTH_SHORT).show();
+            if (GameMechanics.playerWin(state)) {
+
+                scoreX++;
+                Toast.makeText(this, "Player X Wins", Toast.LENGTH_SHORT).show();
+                endGame();
+
+            }
         }
-        else{
-            ((Button)v).setText("O");
+        if (p2Turn) {
+
             state[i][j] = 0;
-            ((Button)v).setBackgroundColor(getResources().getColor(R.color.white));
+            ((Button) v).setText("O");
+            rounds++;
+            ((Button) v).setBackgroundColor(getResources().getColor(R.color.white));
             //Toast.makeText(this,""+i+" "+j, Toast.LENGTH_SHORT).show();
+            if (GameMechanics.cpuWin(state)) {
+
+                scoreO++;
+                Toast.makeText(this, "Player O Wins", Toast.LENGTH_SHORT).show();
+                endGame();
+
+            }
         }
 
-        if (pTurn && GameMechanics.playerWin(state)){
-
-            scoreX++;
-            Toast.makeText(this, "Player Wins", Toast.LENGTH_SHORT).show();
-            endGame();
-
-        }
-        if (cpuTurn && GameMechanics.cpuWin(state)){
-
-            scoreO++;
-            Toast.makeText(this, "CPU wins", Toast.LENGTH_SHORT).show();
-            endGame();
-        }
-        else if (rounds == 9){
+        if (rounds == 9 && !GameMechanics.cpuWin(state) && !GameMechanics.playerWin(state)) {
 
             Toast.makeText(this, "Draw", Toast.LENGTH_SHORT).show();
-            for(int x=0; x<3; x++){
-
-                for(int y=0; y<3; y++){
+            for (int x = 0; x < 3; x++) {
+                for (int y = 0; y < 3; y++) {
 
                     button[x][y].setEnabled(false);
                 }
             }
         }
 
+        if (gameType.equals("cpu") /*&& p1Turn */&& rounds<9) {
+
+            cpuPlay();
+            rounds++;
+            switchTurn();
+            if (GameMechanics.cpuWin(state)) {
+
+                scoreO++;
+                Toast.makeText(this, "CPU Wins", Toast.LENGTH_SHORT).show();
+                endGame();
+
+            }
+        }
+
         switchTurn();
 
     }
+
+    private void cpuPlay(){
+
+         int[][] tempState = state;
+         int tempRounds = rounds;
+        AI_revised.bestMove(tempState , tempRounds);
+        int i = AI_revised.bstMove[0];
+        int j = AI_revised.bstMove[1];
+        if (state[i][j] == -1){
+
+            state[i][j] = 0;
+            button[i][j].setText("O");
+            button[i][j].setBackgroundColor(getResources().getColor(R.color.white));
+        }
+        else Toast.makeText(this, "CPU CONFUSED", Toast.LENGTH_SHORT).show();
+    }
+
+    ////////////////////////////////END GAME ///////////////////////////////////
 
     private void endGame() {
         int x,y;
@@ -174,22 +215,22 @@ public class Board extends AppCompatActivity implements View.OnClickListener {
 
     }
 
-
     private void switchTurn(){
 
-        cpuTurn = pTurn;
-        pTurn = !cpuTurn;
+        p2Turn = p1Turn;
+        p1Turn = !p2Turn;
     }
 
     @Override
     protected void onStop() {
         super.onStop();
 
+        rounds = 0;
+
         for(int i=0; i<3; i++){
             for(int j=0; j<3; j++){
 
                 state[i][j] = -1;
-                rounds = 0;
             }
         }
     }

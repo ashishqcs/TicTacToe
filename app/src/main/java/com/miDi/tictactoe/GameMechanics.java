@@ -86,8 +86,9 @@ public class GameMechanics {
         return false;
     }
 
-        /////////////////////////GET SCORE/////////////////////////////
-    public static int getScore(int[][] state ){
+    ////////////////////////////GET SCORE/////////////////////////////
+
+    public static int getScore(int[][] state){
 
         if (playerWin(state)){
 
